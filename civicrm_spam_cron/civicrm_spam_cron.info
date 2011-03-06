@@ -1,0 +1,9 @@
+; $Id$
+name = CiviCRM Blacklist CRON
+description = Update the DO NOT Email list in CiviCRM
+package = CiviCRM tools
+core = 6.x
+dependencies[] = civicrm
+dependencies[] = civicrm_tools
+version = "6.x-1.0-alpha1"
+project = "uprising_civicrm_tools"

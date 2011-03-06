@@ -1,0 +1,57 @@
+<?php
+
+
+
+/**
+* Implementation of hook_menu
+*/
+function civicrm_tools_menu() {
+
+	$items['admin/civicrm_tools'] = array(
+		'title' => 'CiviCRM tools',
+		'page callback' => 'civicrm_tools_stub',
+		'access arguments' => array('administer site configuration'),
+		'type' => MENU_NORMAL_ITEM,
+	);
+
+  return $items;
+}
+
+function civicrm_tools_stub() {
+	return 'this is a stub page';
+}
+
+function civicrm_tools_perm() {
+  return array('administer civicrm_tools');
+}
+
+
+/*
+ * check to see if the user is at a given url
+ */
+function _civicrm_tools_is_page($check_path) {
+	// global $base_url;
+	$page_url = _civicrm_tools_get_curl_url();
+	if(!stristr($page_url, $check_path)) { 
+		return FALSE;
+	}
+	else {
+		return TRUE;
+	}
+}
+
+function _civicrm_tools_get_curl_url()
+{
+	$pageURL = 'http';
+	if ($_SERVER["HTTPS"] == "on") {$pageURL .= "s";}
+	$pageURL .= "://";
+	if ($_SERVER["SERVER_PORT"] != "80") {
+	$pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"].$_SERVER["REQUEST_URI"];
+	} else {
+	$pageURL .= $_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"];
+	}
+
+	return $pageURL;
+}
+
+?>

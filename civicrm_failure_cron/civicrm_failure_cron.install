@@ -1,0 +1,56 @@
+<?php
+// $Id
+
+/**
+ * Implementation of hook_install().
+ */
+function civicrm_failure_cron_install() {
+	// Create tables.
+	drupal_install_schema('civicrm_failure_cron');
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function civicrm_failure_cron_uninstall() {
+  // Remove tables
+  drupal_uninstall_schema('civicrm_failure_cron');
+  
+  // Kill module variables
+  db_query("DELETE FROM {variable} WHERE name LIKE 'civicrm_failure_cron%'");
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function civicrm_failure_cron_schema() {
+
+	$schema['civicrm_failure_cron'] = array(
+		'description' => t('Stores failed email run information'),
+		'fields' => array(		
+			'date' => array(
+				'type' => 'datetime',
+				'not null' => TRUE,
+				'description' => t('primary key'),
+			),
+			'run' => array(
+				'type' => 'int',
+				'size' => 'tiny',
+				'not null' => TRUE,
+				'default' => 0,
+				'description' => t('How many times has the failure cron ran'),
+			),
+			'processed' => array(
+				'type' => 'int',
+				'not null' => TRUE,
+				'size' => 'big',
+				'default' => 0,
+				'description' => t('How many failure email has been processed'),
+			),
+		),
+		'primary key' => array('date'),
+	);
+	
+	return $schema;
+}
+?>

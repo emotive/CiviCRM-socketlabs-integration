@@ -1,0 +1,111 @@
+<?php
+
+require_once('civicrm_failure_cron.class.php');
+
+/*
+ * Implementation of hook_menu
+ */
+function civicrm_failure_cron_menu() {
+
+	$items['civicrm_tools_email_failure'] = array(
+		'title' => 'Sync failed emails',
+		'page callback' => 'civicrm_failure_cron_main',
+		'access arguments' => array('access content'),
+		'type' => MENU_CALLBACK,
+	);
+	
+	$items['admin/civicrm_tools/email_failure_install'] = array(
+		'title' => 'Sync failed emails install',
+		'page callback' => 'civicrm_failure_cron_alter',
+		'access arguments' => array('administer civicrm_tools'),
+		'type' => MENU_CALLBACK,
+	);
+
+	$items['admin/civicrm_tools/email_failure_config'] = array(
+		'title' => 'email fails configuration',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('civicrm_failure_cron_settings'),
+		'access arguments' => array('administer civicrm_tools'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'civicrm_failure_cron.config.inc',
+	);
+
+  return $items;
+}
+
+/* 
+ * Implementation of hook_cron
+ */
+function civicrm_failure_cron_cron() {
+	// civicrm_failure_cron_run();
+}
+
+function civicrm_failure_cron_main() {
+	
+	$result = civicrm_failure_cron_run();
+	
+	if($result != NULL) {
+		return '<div class="message warning">'.$result.'</div>';
+	} else {
+		return '<div class="message ok">The CiviCRM mailing SPAM cron has ran successfully</div>';
+	}
+	
+}
+
+function civicrm_failure_cron_run() {
+	
+	if(!module_exists('civicrm_spam_cron')) {
+		return 'No CiviCRM black list module detected, aborting operation';
+	}
+	
+	// Check toggle too
+	if(variable_get('civicrm_failure_cron_toggle', 1) == 0) {
+		return 'Failed email sychronization is not turned on';
+	}
+	
+	$failure_cron = civicrm_failure_cron_object();
+	
+	return $failure_cron->run(500, variable_get('civicrm_spam_cron_date_range', 1));
+}
+
+
+function civicrm_failure_cron_object() {
+	$socketlabs = array(
+		'user' => variable_get('civicrm_spam_cron_socketlabs_user', 'user1234'),
+		'apikey' => variable_get('civicrm_spam_cron_socketlabs_key', 'apcver1234'),
+		'account' => variable_get('civicrm_spam_cron_socketlabs_account', '2042'),
+	);
+
+	return new civicrm_failure_cron($socketlabs['user'], $socketlabs['apikey'], $socketlabs['account']);
+}
+
+
+# install the SQL alter for CiviCRM
+function civicrm_failure_cron_alter() {
+	$path = drupal_get_path('module', 'civicrm_failure_cron') . '/bounce_type.sql';
+	
+	if(file_exists($path)) {
+		if(db_result(db_query("SELECT * FROM civicrm_mailing_bounce_type WHERE id = 1001")) == '') {
+			
+			@db_query("ALTER TABLE civicrm_mailing_bounce_type MODIFY `name`
+enum('AOL','Away','DNS','Host','Inactive','Invalid','Loop','Quota','Relay','Spam','Syntax','Unknown', 'Spam complaint', 'Blacklist', 'ISP block', 'Content block', 'URL block', 'Excess traffic', 'Security violation/virus', 'Open relay', 'Namespace mining detection', 'Authentication', 'Other', 'Unknown user', 'Bad domain', 'Address error', 'Closed account', 'Recipient mailbox full', 'Recipient email account is inactive/disabled', 'Greylist', 'server too busy', 'data format error', 'Network error', 'Too Old', 'configuration error', 'Other', 'Unknown')");
+			
+			$query = file_get_contents($path);
+			# assume we are in the same db, put it in class?
+			@db_query($query);
+			drupal_set_message('Database change installed!');			
+		}
+	} 
+	drupal_set_message('Database change already installed!');
+	drupal_goto('admin/civicrm_tools/email_failure_config');
+}
+
+/*
+ * hook_civicrm_mailingGroups
+ */
+ function civicrm_failure_cron_civicrm_mailingGroups(&$form, &$groups, &$mailings) {
+	$failure_cron = civicrm_failure_cron_object();
+	$failure_cron->put_onhold();
+ }
+
+?>

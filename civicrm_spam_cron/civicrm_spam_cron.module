@@ -1,0 +1,66 @@
+<?php
+
+require_once('civicrm_spam_cron.class.php');
+
+function civicrm_spam_cron_menu() {
+
+	$items['admin/civicrm_tools/blacklist'] = array(
+		'title' => 'Email operations',
+		'page callback' => 'civicrm_spam_cron_main',
+		'access arguments' => array('administer civicrm_tools'),
+		'type' => MENU_CALLBACK,
+	);
+
+
+	$items['admin/civicrm_tools/blacklist_config'] = array(
+		'title' => 'Email Complaints configuration',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('civicrm_spam_cron_settings'),
+		'access arguments' => array('administer civicrm_tools'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'civicrm_spam_cron.config.inc',
+	);
+
+  return $items;
+}
+
+/* 
+ * Implementation of hook_cron
+ */
+function civicrm_spam_cron_cron() {
+	civicrm_spam_cron_run();
+}
+
+function civicrm_spam_cron_main() {
+	
+	if(!civicrm_spam_cron_run()) {
+		return '<div class="message warning">The CiviCRM mailing SPAM cron has failed to run or there was no email need to be synched</div>';
+	} else {
+		return '<div class="message ok">The CiviCRM mailing SPAM cron has ran successfully</div>';
+	}
+	
+}
+
+function civicrm_spam_cron_run() {
+	
+	$socketlabs = array(
+		'user' => variable_get('civicrm_spam_cron_socketlabs_user', 'user1234'),
+		'apikey' => variable_get('civicrm_spam_cron_socketlabs_key', 'apcver1234'),
+		'account' => variable_get('civicrm_spam_cron_socketlabs_account', '2042'),
+		'date_range' => variable_get('civicrm_spam_cron_date_range', '1'),
+	);
+	
+	$spam_cron = new civicrm_spam_cron($socketlabs['user'], $socketlabs['apikey'], $socketlabs['account']);
+	
+	$result = $spam_cron->run($socketlabs['date_range']);
+	
+	if(!$result) {
+		watchdog('cron', 'The CiviCRM mailing SPAM cron has failed to run or there was no email need to be synched', array(), WATCHDOG_WARNING);
+		return false;
+	} else {
+		return true;
+	}
+	
+}
+
+?>
